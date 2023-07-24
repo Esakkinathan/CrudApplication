@@ -12,7 +12,7 @@ import sqlite3
 import shutil
 import re
 import cv2
-from functools import partial
+
 win_man=[]
 
 def db_creation():      
@@ -65,7 +65,7 @@ def insert_data(*userDetails):
         mb.showinfo(title="Crud Application",message="Data has been stored",parent=cwin)
         
         go_back()
-        win_man[-1].state("deiconify")
+        #win_man[-1].state("deiconify")
     
     except sqlite3.IntegrityError :
         mb.showerror(title="Crud Application",message="Mail-Id already registered",parent=cwin)
@@ -184,7 +184,7 @@ def upadate_image(file_name,mail):
     '''
     cursor.execute(update_query,(file_name,mail))
     conn.commit()
-    mb.showinfo(title="Crud Application",message="Image Updated Successfully",parent = rwin)
+    #mb.showinfo(title="Crud Application",message="Image Updated Successfully",parent = rwin)
 
 def round_image(image_path, size):
     image = Image.open(image_path)
@@ -197,27 +197,41 @@ def round_image(image_path, size):
     photo = ImageTk.PhotoImage(rounded_image)
     return photo
 
+def show_image(mail):
+    cursor.execute("SELECT image from Users where email=?",(mail,))
+    image_path = cursor.fetchone()
+    if image_path[0] == None:
+        image = cv2.imread("profile.jpg")
+    else:
+        image = cv2.imread(image_path[0])
+    cv2.imshow("Image", image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
 def add_image(mail):
     win.destroy()
     global profile_img
     global img_label
-    global profile_img
+    
     
     dest_file = "images/"
     
     f_types = [('Jpg Files', '*.jpg'),('Png Files', '*.png'),('All files','*.*')]
     file_loc = fd.askopenfilename(parent = rwin,title='Open a Image file',filetypes=f_types)
-    file_name = os.path.basename(file_loc)
-    dest_file+=file_name
-    shutil.copyfile(file_loc,dest_file)
-    upadate_image(dest_file,mail)
-    add_p_btn.configure(text="+ Edit Profile")
-    
-    cursor.execute("SELECT image from Users where email=?",(mail,))
-    img_file = cursor.fetchone()
-    profile_img = round_image(img_file[0], 200)
-    img_label.configure(image=profile_img)
-
+    if file_loc !="" :
+        print("incoming")
+        file_name = os.path.basename(file_loc)
+        print("coming",file_name)
+        dest_file+=file_name
+        shutil.copyfile(file_loc,dest_file)
+        upadate_image(dest_file,mail)
+        add_p_btn.configure(text="+ Edit Profile")
+        
+        cursor.execute("SELECT image from Users where email=?",(mail,))
+        img_file = cursor.fetchone()
+        profile_img = round_image(img_file[0], 200)
+        img_label.configure(image=profile_img)
+    else:return -1
 def update_desc(data,mail):
     u_q = '''
     UPDATE Users
@@ -229,7 +243,7 @@ def update_desc(data,mail):
     conn.commit()
     desc_ent.destroy()
     desc_sub_btn.destroy()
-    mb.showinfo(title="Crud Application",message="Description Updated Successfully",parent = rwin)
+    #mb.showinfo(title="Crud Application",message="Description Updated Successfully",parent = rwin)
     
     cursor.execute("SELECT description from Users where email=?",(mail,))
     a = cursor.fetchone()
@@ -281,32 +295,31 @@ def open_camera(name,mail):
     img_counter = 0
     while True: 
         ret, frame = cam.read()
+        frame = cv2.flip(frame, 1)
+        cv2.imshow("Press Space to capture Esc to Close", frame)
         if not ret:
-            print("failed to grab frame")
             break
-        cv2.imshow("Press Space to capture image", frame)
+        
 
         k = cv2.waitKey(1)
         
         if k%256 == 27:
-            print("Escape hit, closing...")
             break
         elif k%256 == 32:
             img_name = f"images/{name}.png"
             cv2.imwrite(img_name, frame)
             img_counter += 1
             break
-
     cam.release()
     cv2.destroyAllWindows()
-    
-    upadate_image(img_name,mail)
-    add_p_btn.configure(text="+ Edit Profile")
-    cursor.execute("SELECT image from Users where email=?",(mail,))
-    img_file = cursor.fetchone()
-    profile_img = round_image(img_file[0], 200)
-    img_label.configure(image=profile_img)
-
+    if img_name is not None:
+        upadate_image(img_name,mail)
+        add_p_btn.configure(text="+ Edit Profile")
+        cursor.execute("SELECT image from Users where email=?",(mail,))
+        img_file = cursor.fetchone()
+        profile_img = round_image(img_file[0], 200)
+        img_label.configure(image=profile_img)
+    else: return -1
 def open_image(name,mail):
     global win
     win = Toplevel()
@@ -533,6 +546,10 @@ def read(res):
     Label(rFrame,text=f":\t{res[0][4]}",font=labelfont,fg="gold").place(x=950,y=700)
     Label(rFrame,text=f":\t{res[0][5]}",font=labelfont,fg="gold").place(x=950,y=800)
     
+    if res[0][6] is None:
+        img_label.bind("<Button-1>", lambda event: show_image(res[0][0]))
+    else:
+        img_label.bind("<Button-1>", lambda event: show_image(res[0][0]))
 
 def update():
     global uwin
