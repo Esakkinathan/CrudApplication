@@ -208,6 +208,10 @@ def show_image(mail):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+# def show_image(mail):
+    
+#     threading.Thread(target=display_opencv_image,args=(mail,)).start()
+
 def add_image(mail):
     win.destroy()
     global profile_img
@@ -534,7 +538,7 @@ def read(res):
         ttb.Button(rFrame,image=plus,command=lambda:add_desc(res[0][0]),bootstyle="dark").place(x=1700,y=200)
        
     Label(rFrame,text="Welcome back",font=("geogia",30)).place(x=800,y=350)
-    Label(rFrame,text=res[0][1],font=ffont,fg="gold").place(x=1150,y=350)
+    Label(rFrame,text=res[0][1].upper(),font=ffont,fg="gold").place(x=1150,y=350)
     
     Label(rFrame,text="Mail-Id",font=labelfont).place(x=600,y=500)
     Label(rFrame,text="Phone Number",font=labelfont).place(x=600,y=600)
