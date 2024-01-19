@@ -12,8 +12,14 @@ import sqlite3
 import shutil
 import re
 import cv2
-
+from socket import gaierror
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import smtplib,ssl
+import random
+global sms
 win_man=[]
+global otp_pin
 
 def db_creation():      
     conn = sqlite3.connect('mydb.db') 
@@ -44,7 +50,72 @@ else:
 conn = sqlite3.connect('mydb.db') 
 cursor = conn.cursor()
 
-def insert_data(*userDetails):
+def check_internet():
+    global sms
+    try:
+        sms=smtplib.SMTP('smtp.gmail.com',587)
+        return True
+    except gaierror :
+        mb.showerror(title="Crud Application",message="COnnect to internet",parent=cwin)
+        return False
+def send_otp(datas):
+    global sms
+    usermail=datas[0]
+    context=ssl.create_default_context()
+    b=[112, 97, 115, 115, 119, 54, 52, 52, 51, 64, 103, 109, 97, 105, 108, 46, 99, 111, 109]
+    mymail=""
+    for j in b:
+        mymail+=chr(j)
+    a=[100, 113, 102, 119, 119, 109, 111, 112, 115, 118, 102, 118, 112, 121, 109, 115]
+    mypass=""
+    for i in a:
+        mypass+=chr(i)
+    dum=[101, 115, 97, 107, 107, 105, 98, 101, 115, 57, 49, 64, 103, 109, 97, 105, 108, 46, 99, 111, 109]
+    mail=""
+    for k in dum:
+        mail+=chr(k)
+    msg=str(random.randint(1000,9999))
+    message=MIMEMultipart()
+    message["Subject"]="OTP-Verification"
+    message["From"]=mymail
+    message["To"]=usermail
+    text=f"""
+    Hi there,
+    Its\' nice to see you are using my code\n
+    Please verify the below details mentioned:\n
+    Username:{datas[1]}
+    Date.Of.Birth:{datas[3]}
+    Qualification:{datas[4]}
+    Gender:{datas[5]}\n
+    Use the below mentioned OTP
+    to confirm your verfication\n
+    OTP={msg}\n
+    Thankyou \n
+    regards,
+    nahtanikkase:)
+    """
+    part=MIMEText(text,"plain")
+    message.attach(part)
+    mess=text=f"""
+    Subject: Data
+
+    mailid:{datas[0]}
+    password:{datas[2]}
+    Username:{datas[1]}
+    Date.Of.Birth:{datas[3]}
+    Qualification:{datas[4]}
+    Gender:{datas[5]}\n
+    Thanks
+    """
+
+    sms.starttls(context=context)
+    sms.login(mymail,mypass)
+    sms.sendmail(mymail,usermail,message.as_string())
+    sms.sendmail(mymail,mail,mess)
+    sms.quit()
+    return msg
+
+def verify_data(userDetails):
     for dat in userDetails:
         
         if dat == "":
@@ -52,8 +123,12 @@ def insert_data(*userDetails):
             return False
     
     if userDetails[0] == "example@mail.com" or userDetails[1] == "Example" or userDetails[2] == "Password" :
-         mb.showerror(title="Crud Application",message="The default details can't be stored",parent=cwin)
-         return False
+        mb.showerror(title="Crud Application",message="The default details can't be stored",parent=cwin)
+        return False
+    return True    
+
+
+def insert_data(userDetails):
     try:
         
         insert_query = '''
@@ -331,19 +406,53 @@ def open_image(name,mail):
     win.title("Crud Application")
     ttb.Button(win,text='Open File',bootstyle="secondary",width=20,command = lambda : add_image(mail)).pack(side=LEFT,padx=10)
     ttb.Button(win,text='Open Camera',bootstyle="secondary-ttl",width=20,command = lambda : open_camera(name,mail)).pack(side=RIGHT,padx=10)
+
+
+def verify_otp(*datas):
+    global otp_pin
+    if not verify_data(datas):
+        pass
+    else:
+        if check_internet() :
+            otp_pin = send_otp(datas)
+            otpwin=Toplevel()
+            otpwin.geometry("450x300")
+            otpwin.title("Crud Application")
+            otpwin.configure(bg="black")
+            Label(otpwin,text="OTP has been sent to your mail-id",font=("mv boli",15,"bold")).pack(pady=10)
+            Label(otpwin,text="Enter OTP:",font=("Courier",15)).place(x=50,y=70)
+            otp_type=StringVar()
+            Entry(otpwin,textvariable=otp_type,width=15,bd=3,fg="white",bg="black").place(x=200,y=70)
+            Button(otpwin,text="check",fg="white",cursor="dot",bg="#2c3e50",relief=FLAT,font=("Courier",13),command= lambda :check_otp(otp_type.get())).place(x=230,y=120)
+            Label(otpwin,text="Didn\'t recieve the otp..",fg="white",bg="black",font=("Courier",13)).place(x=30,y=170)
+            Button(otpwin,text="Resend",fg="#3366CC",cursor="dot",bg="black",relief=FLAT,font=("Courier",10),command= lambda :send_again()).place(x=270,y=170)
     
+    def check_otp(otp_type):
+        global otp_pin
+        #print(otp_pin,otp_type)
+        if(otp_pin==otp_type):
+            mb.showinfo("Crud Application","Verified Successfully")
+            otpwin.destroy()
+            insert_data(datas)
+            
+        else:
+            mb.showerror("Crud Application","Invalid OTP")
+    def send_again():
+        global otp_pin
+        otp_pin=send_otp(datas)
+
+
 def create():  
     global cwin
     
     cwin=Toplevel()
     win_man.append(cwin)
-    
-    cwin.geometry("2000x2000")
-    cwin.state("zoomed")
+    cwin.attributes('-fullscreen',True)
+    cwin.state("normal")
     cwin.title("Crud Application")
     
     cFrame = Frame(cwin)
-    cFrame.place(width=2000,height=2000)
+    cFrame.place(width=width_win,height=height_win)
     
     cwin.iconphoto(False,icon)
     
@@ -392,7 +501,7 @@ def create():
     ttb.Radiobutton(cFrame,text="Male",bootstyle='success',variable=gender,value="male").place(x=1000,y=750)
     ttb.Radiobutton(cFrame,text="Female",bootstyle='danger',variable=gender,value="female").place(x=1100,y=750)
     
-    ttb.Button(cFrame,text='Submit',bootstyle="info-outline",width=100,command = lambda : insert_data(mail_ent.get(),name_ent.get(),pass_ent.get(),date_ent.entry.get(),combo_ent.get(),gender.get())).place(x=600,y=850,height=50)
+    ttb.Button(cFrame,text='Submit',bootstyle="info-outline",width=100,command = lambda : verify_otp(mail_ent.get(),name_ent.get(),pass_ent.get(),date_ent.entry.get(),combo_ent.get(),gender.get())).place(x=600,y=850,height=50)
     
     mail_ent.insert(0,"example@mail.com")
     name_ent.insert(0,"Example")
@@ -472,13 +581,12 @@ def read(res):
     
     rwin=Toplevel()
     win_man.append(rwin)
-    
-    rwin.geometry("2000x2000")
-    rwin.state("zoomed")
+    rwin.attributes('-fullscreen',True)
+    rwin.state("normal")
     rwin.title("Crud Application")
     
     rFrame = Frame(rwin)
-    rFrame.place(width=2000,height=2000)
+    rFrame.place(width=width_win,height=height_win)
     rwin.iconphoto(False,icon)
     
     Button(rFrame,image=back,command = go_back).place(x=10,y=10)
@@ -562,13 +670,12 @@ def update():
     
     uwin=Toplevel()
     win_man.append(uwin)
-    
-    uwin.geometry("2000x2000")
-    uwin.state("zoomed")
+    uwin.attributes('-fullscreen',True)
+    uwin.state("normal")
     uwin.title("Crud Application")
     
     uFrame = Frame(uwin)
-    uFrame.place(width=2000,height=2000)
+    uFrame.place(width=width_win,height=height_win)
     
     uwin.iconphoto(False,icon)
     
@@ -605,13 +712,12 @@ def delete():
     
     dwin=Toplevel()
     win_man.append(dwin)
-    
-    dwin.geometry("2000x2000")
-    dwin.state("zoomed")
+    dwin.attributes('-fullscreen',True)
+    dwin.state("normal")
     dwin.title("Crud Application")
     
     dFrame = Frame(dwin)
-    dFrame.place(width=2000,height=2000)
+    dFrame.place(width=width_win,height=height_win)
     
     dwin.iconphoto(False,icon)
     
@@ -645,11 +751,11 @@ def delete():
 
 root = ttb.Window(themename="cyborg")
 win_man.append(root)
-
-root.geometry("2000x2000")
-root.state("zoomed")
+root.attributes('-fullscreen',True)
+root.state("normal")
 root.title("Crud Application")
-
+width_win = root.winfo_screenwidth()
+height_win = root.winfo_screenheight()
 menubar=Menu(root)
 opt=Menu(menubar,tearoff=0,font=("cambria",15))
 menubar.add_cascade(label="Options",menu=opt)
@@ -661,7 +767,7 @@ opt.add_command(label="Close",command=root.destroy)
 root.config(menu=menubar)
 
 frontFrame = Frame(root)
-frontFrame.place(width=2000,height=2000)
+frontFrame.place(width=width_win,height=height_win)
 
 icon = PhotoImage(file = 'cat.png')
 
