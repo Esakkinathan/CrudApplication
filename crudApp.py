@@ -298,10 +298,9 @@ def add_image(mail):
     f_types = [('Jpg Files', '*.jpg'),('Png Files', '*.png'),('All files','*.*')]
     file_loc = fd.askopenfilename(parent = rwin,title='Open a Image file',filetypes=f_types)
     if file_loc !="" :
-        print("incoming")
-        file_name = os.path.basename(file_loc)
-        print("coming",file_name)
-        dest_file+=file_name
+        file_name,extention = os.path.splitext(file_loc)
+        dest_file+=mail+extention
+        print(dest_file)
         shutil.copyfile(file_loc,dest_file)
         upadate_image(dest_file,mail)
         add_p_btn.configure(text="+ Edit Profile")
