@@ -17,6 +17,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import smtplib,ssl
 import random
+import hashlib
+
+
 global sms
 win_man=[]
 global otp_pin
@@ -127,10 +130,11 @@ def verify_data(userDetails):
         return False
     return True    
 
+def hash_password_sha256(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
 def insert_data(userDetails):
     try:
-        
         insert_query = '''
         INSERT INTO Users (email, name, password, date_of_birth, qualification, gender)
         VALUES (?, ?, ?, ?, ?, ?)'''
@@ -162,7 +166,7 @@ def read_data(mail,pwd):
     if (len(res) == 0):
         mb.showerror("Crud Application","invalid mail id")
     else:
-        if(res[0][2] == pwd):
+        if res[0][2] == hashlib.sha256(pwd.encode()).hexdigest():
             read(res)
         else:
             mb.showerror("Crud Application","Invalid Password")
@@ -377,10 +381,7 @@ def open_camera(name,mail):
         cv2.imshow("Press Space to capture Esc to Close", frame)
         if not ret:
             break
-        
-
         k = cv2.waitKey(1)
-        
         if k%256 == 27:
             break
         elif k%256 == 32:
@@ -500,7 +501,7 @@ def create():
     ttb.Radiobutton(cFrame,text="Male",bootstyle='success',variable=gender,value="male").place(x=1000,y=750)
     ttb.Radiobutton(cFrame,text="Female",bootstyle='danger',variable=gender,value="female").place(x=1100,y=750)
     
-    ttb.Button(cFrame,text='Submit',bootstyle="info-outline",width=100,command = lambda : verify_otp(mail_ent.get(),name_ent.get(),pass_ent.get(),date_ent.entry.get(),combo_ent.get(),gender.get())).place(x=600,y=850,height=50)
+    ttb.Button(cFrame,text='Submit',bootstyle="info-outline",width=100,command = lambda : verify_otp(mail_ent.get(),name_ent.get(),hash_password_sha256(pass_ent.get()),date_ent.entry.get(),combo_ent.get(),gender.get())).place(x=600,y=850,height=50)
     
     mail_ent.insert(0,"example@mail.com")
     name_ent.insert(0,"Example")
